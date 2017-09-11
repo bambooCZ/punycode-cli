@@ -1,0 +1,26 @@
+{
+  "name": "punycode-cli",
+  "version": "1.0.0",
+  "description": "CLI interface for punycode with similiar options as base64 CLI tool",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/bambooCZ/punycode-cli.git"
+  },
+  "keywords": [
+    "punycode",
+    "cli"
+  ],
+  "author": "Miloslav Mrvík <mrvik@centrum.cz>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bambooCZ/punycode-cli/issues"
+  },
+  "homepage": "https://github.com/bambooCZ/punycode-cli#readme",
+  "bin": {
+    "punycode": "./index.js"
+  },
+  "devDependencies": {
+    "punycode": "^2.1.0"
+  }
+}
