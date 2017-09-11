@@ -1,7 +1,7 @@
 {
   "name": "punycode-cli",
-  "version": "1.0.0",
-  "description": "CLI interface for punycode with similiar options as base64 CLI tool",
+  "version": "1.0.1",
+  "description": "CLI interface for punycode with similiar options as the base64 CLI tool",
   "main": "index.js",
   "repository": {
     "type": "git",

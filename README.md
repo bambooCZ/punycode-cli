@@ -1,5 +1,7 @@
 # punycode-cli
 
+CLI interface for punycode with similiar options as the base64 CLI tool
+
 ## Installation
 
 ```
