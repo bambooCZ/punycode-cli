@@ -30,7 +30,7 @@ echo -n "😄.example.com" | punycode;
 ASCII domain to UTF-8
 
 ```
-echo -n "xn--i28h.example.com" | punycode;
+echo -n "xn--i28h.example.com" | punycode -D;
 ```
 
 ## Contributing
