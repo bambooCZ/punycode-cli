@@ -9,28 +9,57 @@ function error (message, exitCode = 255) {
 
 function readAll (readStream) {
     return new Promise((resolve, reject) => {
+        let onError, onData, onEnd;
+        const finalize = () => {
+            readStream.removeListener("data", onData);
+            readStream.removeListener("end", onEnd);
+            readStream.removeListener("error", onError);
+        };
+
         let chunks = [];
-        readStream.on("data", (chunk) => chunks.push(chunk));
-        readStream.on("error", (err) => reject(err));
-        readStream.on("end", () => resolve(Buffer.concat(chunks)));
+        readStream.on("data", onData = (chunk) => chunks.push(chunk));
+        readStream.on("error", onError = (err) => {
+            finalize();
+            reject(err);
+        });
+        readStream.on("end", onEnd = () => {
+            finalize();
+            resolve(Buffer.concat(chunks));
+        });
         readStream.resume();
     });
 }
 
 function writeAll (writeStream, data) {
     return new Promise((resolve, reject) => {
-        writeStream.on('error', (err) => reject(err));
-        writeStream.on('drain', () => resolve());
-        writeStream.write(data, null);
+        let onError, onDrain;
+        const finalize = () => {
+            writeStream.removeListener("error", onError);
+            writeStream.removeListener("drain", onDrain);
+        };
+
+        writeStream.on("error", onError = (err) => {
+            finalize();
+            reject(err);
+        });
+
+        writeStream.on("drain", onDrain = () => {
+            finalize();
+            resolve();
+        });
+
+        if (!writeStream.write(data, null)) {
+            finalize();
+            process.nextTick(resolve);
+        }
     });
 }
 
-
+const STRING_CHARSET = "utf-8";
 const argv = process.argv;
-let readStream = process.stdin,
-    writeStream = process.stdout,
-    decode = false,
-    charset = 'utf-8';
+let readStream = () => process.stdin,
+    writeStream = () => process.stdout,
+    decode = false;
 
 for (let i = 2, len = argv.length; i < len; i++) {
     let param = argv[i];
@@ -48,13 +77,6 @@ for (let i = 2, len = argv.length; i < len; i++) {
             break;
         }
 
-        case "--charset": {
-            let val = argv[++i];
-            if (!(val && typeof val === "string")) error(`Value of "${param}" must be non-empty string`);
-            charset = val;
-            break;
-        }
-
         case "--decode":
         case "-D": {
             decode = true;
@@ -63,37 +85,37 @@ for (let i = 2, len = argv.length; i < len; i++) {
 
         case "--input":
         case "-i": {
-            let val = argv[++i];
+            const val = argv[++i];
             if (!(val && typeof val === "string")) error(`Value of "${param}" must be non-empty string`);
             if (val === "-") {
-                readStream = process.stdin;
+                readStream = () => process.stdin; // jshint ignore:line
             } else {
-                readStream = require("fs").createReadStream(val, { autoClose: true, flags: "r", encoding: null });
+                readStream = () => require("fs").createReadStream(val, { autoClose: true, flags: "r", encoding: null }); // jshint ignore:line
             }
             break;
         }
 
         case "--output":
         case "-o": {
-            let val = argv[++i];
+            const val = argv[++i];
             if (!(val && typeof val === "string")) error(`Value of "${param}" must be non-empty string`);
             if (val === "-") {
-                writeStream = process.stdout;
+                writeStream = () => process.stdout; // jshint ignore:line
             } else {
-                writeStream = require("fs").createWriteStream(val, { autoClose: true, flags: "w", encoding: null, mode: 0o644 });
+                writeStream = () => require("fs").createWriteStream(val, { autoClose: true, flags: "w", encoding: null, mode: 0o644 }); // jshint ignore:line
             }
             break;
         }
 
         default: {
-            error(`Invalid argument '${param}'`);
+            error(`Invalid argument "${param}"`);
         }
     }
 }
 
-readAll(readStream).then(
+readAll(readStream()).then(
     (buffer) => {
-        let data = buffer.toString(charset);
+        const data = buffer.toString(STRING_CHARSET);
         if (decode) {
             return require("punycode").toUnicode(data);
         } else {
@@ -101,8 +123,32 @@ readAll(readStream).then(
         }
     }
 ).then(
-    (processed) => writeAll(writeStream, Buffer.from(processed, charset))
-).then(
-    () => process.exit(0),
-    (err) => error(err.message, 1)
+    (processed) => {
+        const ws = writeStream();
+        return writeAll(ws, Buffer.from(processed, STRING_CHARSET)).then(
+            () => {
+                if (ws !== process.stdout) return new Promise((resolve, reject) => {
+                    let onFinish, onError;
+                    const finalize = () => {
+                        ws.removeListener("error", onError);
+                        ws.removeListener("finish", onFinish);
+                    };
+
+                    ws.on("error", onError = (err) => {
+                        finalize();
+                        reject(err);
+                    });
+
+                    ws.on("finish", onFinish = () => {
+                        finalize();
+                        resolve();
+                    });
+
+                    ws.end();
+                });
+            }
+        );
+    }
+).catch(
+    (err) => error(err.stack || err.message, 1)
 );
