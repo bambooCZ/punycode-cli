@@ -1,11 +1,11 @@
 {
   "name": "punycode-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI interface for punycode with similiar options as the base64 CLI tool",
   "main": "index.js",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/bambooCZ/punycode-cli.git"
+    "url": "https://github.com/bambooCZ/punycode-cli.git"
   },
   "keywords": [
     "punycode",
@@ -20,7 +20,7 @@
   "bin": {
     "punycode": "./index.js"
   },
-  "devDependencies": {
+  "dependencies": {
     "punycode": "^2.1.0"
   }
 }
